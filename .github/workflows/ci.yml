@@ -60,7 +60,6 @@ jobs:
           $exe = "publish/Kilobyt.exe"
           if (-not (Test-Path $exe)) { throw "Kilobyt.exe was not produced" }
           $ver = if ($env:GITHUB_REF_TYPE -eq 'tag') { $env:GITHUB_REF_NAME } else { 'dev' }
-          Copy-Item $exe "publish/Kilobyt.exe" -Force
           Compress-Archive -Path $exe -DestinationPath "Kilobyt-$ver-win-x64.zip" -Force
           $hash = (Get-FileHash $exe -Algorithm SHA256).Hash.ToLower()
           $ziphash = (Get-FileHash "Kilobyt-$ver-win-x64.zip" -Algorithm SHA256).Hash.ToLower()
