@@ -42,17 +42,22 @@ jobs:
         run: dotnet test tests/Kilobyt.App.Tests/Kilobyt.App.Tests.csproj -c Release --logger "console;verbosity=normal"
 
       - name: Publish single-file exe
-        run: >
-          dotnet publish src/Kilobyt.App/Kilobyt.App.csproj
-          -c Release
-          -r win-x64
-          --self-contained true
-          -p:PublishSingleFile=true
-          -p:IncludeNativeLibrariesForSelfExtract=true
-          -p:EnableCompressionInSingleFile=true
-          -p:DebugType=embedded
-          -p:Version=${{ github.ref_type == 'tag' && github.ref_name || '1.0.0' }}
-          -o publish
+        shell: pwsh
+        run: |
+          # NuGet versions cannot carry the leading "v" of the tag (v1.0.0 -> 1.0.0).
+          $ver = if ($env:GITHUB_REF_TYPE -eq 'tag') { $env:GITHUB_REF_NAME.TrimStart('v') } else { '1.0.0' }
+          Write-Host "publishing version $ver"
+          dotnet publish src/Kilobyt.App/Kilobyt.App.csproj `
+            -c Release `
+            -r win-x64 `
+            --self-contained true `
+            -p:PublishSingleFile=true `
+            -p:IncludeNativeLibrariesForSelfExtract=true `
+            -p:EnableCompressionInSingleFile=true `
+            -p:DebugType=embedded `
+            -p:Version=$ver `
+            -o publish
+          if ($LASTEXITCODE -ne 0) { throw "dotnet publish failed with exit code $LASTEXITCODE" }
 
       - name: Package
         shell: pwsh
