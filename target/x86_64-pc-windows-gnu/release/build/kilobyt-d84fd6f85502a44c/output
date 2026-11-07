@@ -1,0 +1,3 @@
+cargo:rerun-if-changed=assets/kilobyt.manifest
+cargo:rerun-if-changed=assets/kilobyt.rc
+cargo:rustc-link-arg=/root/work/kilobyt/target/x86_64-pc-windows-gnu/release/build/kilobyt-d84fd6f85502a44c/out/kilobyt-manifest.o

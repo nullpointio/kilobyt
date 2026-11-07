@@ -9,15 +9,16 @@ Kilobyt is one small Windows exe. You drop photos in, type the limit the form gi
 a file that is **at or under that limit** — or no file at all, with an honest message saying what the
 smallest achievable size is.
 
-> **Screenshot pending.** The UI is built and compiled, but this release was produced without a
-> Windows machine to run it on — the first screenshot will be added after the first real Windows run.
-> Everything below about behaviour is backed by the test suite, not by a picture.
+![Kilobyt](docs/assets/screenshot.png)
+
+> Screenshot is a real capture of the running binary (under Wine on Linux, so the widget theme is
+> plainer than on Windows 11). Windows CI runs the same exe's `-selftest` on every push.
 
 ## Download
 
 **[Kilobyt.exe — latest release](https://github.com/nullpointio/kilobyt/releases/latest)**
 
-* Windows 10/11, x64, no installer, no .NET runtime needed (self-contained single file, ~65 MB).
+* Windows 10/11, x64, no installer, no runtime to install — a single native exe of about 1 MB.
 * The exe is **unsigned**, so Windows SmartScreen will warn you on first run (`More info → Run anyway`).
   SHA-256 hashes for every release are in `SHA256SUMS.txt` on the release page.
 * Windows only. There is no Mac or Linux build.
@@ -77,22 +78,24 @@ nothing between runs.
 
 ## Build
 
-```bash
-# unit tests (pure logic, runs on any OS)
-dotnet test tests/Kilobyt.Core.Tests -c Release
+Native Rust, no runtime, no installer. ~1 MB single exe.
 
-# Windows binary
-dotnet publish src/Kilobyt.App/Kilobyt.App.csproj -c Release -r win-x64 --self-contained true \
-  -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true \
-  -p:EnableCompressionInSingleFile=true -o publish
+```bash
+cargo test --all --release          # engine tests, run on any OS
+
+cargo build --release                # on Windows: target/release/kilobyt.exe
+# or cross-compile from Linux with MinGW:
+rustup target add x86_64-pc-windows-gnu
+cargo build --release --target x86_64-pc-windows-gnu
 ```
 
-`Kilobyt.Core` is a dependency-free `net8.0` library (no `System.Drawing`, no Windows APIs) holding
-the whole algorithm: quality search, resampling, metadata rules, naming. `Kilobyt.App` is a thin
-WinForms shell plus the `System.Drawing` JPEG codec. CI runs the core suite on Linux, then the Windows
-integration suite and the publish step on `windows-latest`, and creates the release on a `v*` tag.
+The whole algorithm lives in `src/fit.rs` — a plain library with no UI or Windows dependency, so the
+compression search, resampling, EXIF handling and naming are tested on any platform. `src/ui_windows.rs`
+is a thin Win32 shell (no GUI framework). CI runs `cargo test` and clippy on Linux, runs the tests plus
+`kilobyt.exe -selftest` on `windows-latest`, and publishes the release on a `v*` tag.
 
 The product spec, including the exact algorithm and its acceptance criteria, is in [`docs/prd.md`](docs/prd.md).
+The original C#/.NET implementation is kept on the `csharp-v1` branch for reference.
 
 ## License
 

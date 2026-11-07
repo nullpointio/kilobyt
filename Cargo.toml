@@ -1,0 +1,42 @@
+[package]
+name = "kilobyt"
+version = "1.1.0"
+edition = "2021"
+rust-version = "1.75"
+description = "Makes a photo provably fit a hard upload limit. Offline, native, no runtime."
+license = "MIT"
+authors = ["nullpointio"]
+repository = "https://github.com/nullpointio/kilobyt"
+
+[[bin]]
+name = "kilobyt"
+path = "src/main.rs"
+
+[lib]
+name = "kilobyt"
+path = "src/lib.rs"
+
+[dependencies]
+image = { version = "0.25", default-features = false, features = ["jpeg", "png", "bmp"] }
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.59", features = [
+    "Win32_Foundation",
+    "Win32_Graphics_Gdi",
+    "Win32_System_LibraryLoader",
+    "Win32_UI_Controls",
+    "Win32_UI_Controls_Dialogs",
+    "Win32_UI_Shell",
+    "Win32_UI_WindowsAndMessaging",
+] }
+
+[features]
+# Builds a console binary so -selftest can print on Windows CI.
+console = []
+
+[profile.release]
+opt-level = "z"
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true

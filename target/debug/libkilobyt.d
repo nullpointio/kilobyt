@@ -1,0 +1,1 @@
+/root/work/kilobyt/target/debug/libkilobyt.rlib: /root/work/kilobyt/src/exif.rs /root/work/kilobyt/src/fit.rs /root/work/kilobyt/src/lib.rs /root/work/kilobyt/src/naming.rs /root/work/kilobyt/src/selftest.rs

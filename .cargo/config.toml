@@ -1,0 +1,9 @@
+# Cross-compile to Windows from Linux with MinGW (used for local verification and
+# for running the exe under Wine). CI builds on windows-latest with MSVC instead.
+[target.x86_64-pc-windows-gnu]
+linker = "x86_64-w64-mingw32-gcc"
+ar = "x86_64-w64-mingw32-ar"
+
+[target.x86_64-pc-windows-gnu.env]
+# statically link the MinGW runtime so the exe has no external DLL requirements
+RUSTFLAGS = "-C target-feature=+crt-static"

@@ -1,0 +1,2 @@
+cargo:rerun-if-changed=assets/kilobyt.manifest
+cargo:rerun-if-changed=assets/kilobyt.rc

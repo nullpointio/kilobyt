@@ -1,0 +1,3 @@
+// RT_MANIFEST (24) with CREATEPROCESS_MANIFEST_RESOURCE_ID (1). The numeric
+// forms avoid needing a resource compiler that can preprocess <windows.h>.
+1 24 "kilobyt.manifest"
