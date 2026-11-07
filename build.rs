@@ -42,16 +42,54 @@ fn main() {
         let args = ["/nologo", "/I", "assets"];
         compile("rc.exe", rc, &res, "/fo", &args)
             .or_else(|| compile("rc", rc, &res, "/fo", &args))
+            .or_else(|| {
+                // rc.exe is only on PATH inside a Visual Studio developer prompt; the
+                // GitHub windows-latest shell is not one. Look where the Windows SDK
+                // actually installs it (newest version first).
+                find_sdk_rc().and_then(|tool| {
+                    let tool = tool.to_string_lossy().to_string();
+                    compile(&tool, rc, &res, "/fo", &args)
+                })
+            })
             .map(|()| res)
     };
 
     match linked {
         Some(path) => println!("cargo:rustc-link-arg={}", path.display()),
-        None => println!(
-            "cargo:warning=no resource compiler found for {target}; \
-             the binary will not declare Common Controls v6 and will use legacy styling"
-        ),
+        None => {
+            // A release without the manifest looks like Windows 95. Fail the build on
+            // Windows instead of shipping that silently; non-Windows hosts already returned.
+            panic!(
+                "no resource compiler found for target {target}: cannot embed assets/kilobyt.rc. \
+                 Install the Windows SDK, or build the *-windows-gnu target with MinGW's windres."
+            );
+        }
     }
+}
+
+/// Locates `rc.exe` in the Windows SDK (e.g.
+/// `C:\Program Files (x86)\Windows Kits\10\bin\10.0.22621.0\x64\rc.exe`).
+fn find_sdk_rc() -> Option<PathBuf> {
+    let roots = [
+        r"C:\Program Files (x86)\Windows Kits\10\bin",
+        r"C:\Program Files\Windows Kits\10\bin",
+    ];
+    for root in roots {
+        let Ok(entries) = std::fs::read_dir(root) else {
+            continue;
+        };
+        let mut versions: Vec<PathBuf> = entries.flatten().map(|e| e.path()).collect();
+        versions.sort();
+        for version in versions.iter().rev() {
+            for arch in ["x64", "x86"] {
+                let candidate = version.join(arch).join("rc.exe");
+                if candidate.is_file() {
+                    return Some(candidate);
+                }
+            }
+        }
+    }
+    None
 }
 
 fn compile(tool: &str, rc: &Path, out: &Path, out_flag: &str, extra: &[&str]) -> Option<()> {
