@@ -1,0 +1,49 @@
+name: First-run report
+description: You ran Kilobyt on a real Windows machine. Tell us exactly what happened - this is the most useful report there is.
+title: "[first run] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks - a first-run report is worth more than a star. The UI has not been run on real Windows hardware yet, so anything you see here is new information.
+
+        Do not upload a photo you would not put in a public issue. A cropped screenshot of the app window is enough.
+  - type: input
+    id: windows
+    attributes:
+      label: Windows version and build
+      description: Settings > System > About, or `winver`.
+      placeholder: Windows 11 23H2 (22631.4317), x64
+    validations:
+      required: true
+  - type: dropdown
+    id: outcome
+    attributes:
+      label: What happened when you ran Kilobyt.exe
+      options:
+        - Opened, and the window looked normal
+        - Opened, but the layout or controls are wrong
+        - Did not open (error dialog or nothing at all)
+        - Blocked by SmartScreen, antivirus or a corporate policy
+    validations:
+      required: true
+  - type: textarea
+    id: details
+    attributes:
+      label: What you did and what you saw
+      description: The files you dropped in, the limit you typed, and the result. Exact error text if there was one.
+      placeholder: |
+        Dropped 3 JPEGs, limit 100 KB, max 600x600. Two wrote fine at 96 KB; one showed "smallest achievable 212 KB".
+    validations:
+      required: true
+  - type: textarea
+    id: portal
+    attributes:
+      label: Did a real form accept the output? (optional)
+      description: Portal name, the limit it stated, and the size of the file Kilobyt wrote. This is the only failure mode that matters.
+      placeholder: |
+        Portal: state visa application. Stated limit: 100 KB, 600x600 max.
+        Kilobyt wrote 98,412 bytes. Portal accepted it.
+    validations:
+      required: false
