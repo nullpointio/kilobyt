@@ -3,6 +3,43 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="index,follow">
+<link rel="canonical" href="https://raw.githack.com/nullpointio/kilobyt/main/docs/index.html">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Kilobyt">
+<meta property="og:title" content="Kilobyt — make a photo fit an exact upload limit, offline">
+<meta property="og:description" content="Windows exe, no installer, no account. Ask for 100 KB and get a file at or under 100,000 bytes, measured on disk. Nothing is uploaded; EXIF and GPS are stripped. Free, MIT — the exe is unsigned.">
+<meta property="og:url" content="https://raw.githack.com/nullpointio/kilobyt/main/docs/index.html">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Kilobyt — a photo at or under an exact upload limit, offline">
+<meta name="twitter:description" content="Free Windows exe for &quot;photo must be under 100 KB&quot; forms. Local only, no upload, metadata stripped. Unsigned; source and SHA-256 published.">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "Kilobyt",
+  "applicationCategory": "UtilitiesApplication",
+  "applicationSubCategory": "Image compression",
+  "operatingSystem": "Windows 10, Windows 11 (x64)",
+  "softwareVersion": "1.0.0",
+  "fileSize": "71674902",
+  "downloadUrl": "https://github.com/nullpointio/kilobyt/releases/latest",
+  "installUrl": "https://github.com/nullpointio/kilobyt/releases/latest",
+  "license": "https://github.com/nullpointio/kilobyt/blob/main/LICENSE",
+  "isAccessibleForFree": true,
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+  "description": "Windows utility that compresses a JPEG to a byte limit and an optional maximum pixel size you specify, entirely offline. The written file's length is re-read from disk before success is reported; if the limit cannot be reached, no file is written.",
+  "featureList": [
+    "Exact byte limit, 1 KB = 1000 bytes",
+    "Optional maximum pixel box, aspect ratio preserved, never upscales",
+    "Batch processing with per-file status",
+    "EXIF, GPS, camera serial, timestamps, XMP and IPTC stripped",
+    "No network code in the binary"
+  ],
+  "url": "https://github.com/nullpointio/kilobyt"
+}
+</script>
+
 <title>Kilobyt — make a photo fit an exact upload limit, offline</title>
 <meta name="description" content="A small Windows app that makes a photo provably fit a hard upload limit (exact KB, optional max pixels). Nothing is uploaded. Metadata stripped. Free, MIT.">
 <style>
@@ -132,6 +169,24 @@
     that is expected, not a bug. Choose <em>More info → Run anyway</em>, or check the hash first, or build
     it from source. Code signing costs money and this project has no certificate.
   </div>
+
+  <h2>Questions people actually ask</h2>
+  <ul class="plain">
+    <li><b>Why is the exe unsigned?</b> There is no code-signing certificate — a recurring cost this project
+      does not carry. SmartScreen warns once; verify the SHA-256 or build from source instead of trusting it.</li>
+    <li><b>Does “under 100 KB” really mean under 100 KB?</b> Yes, measured on the written file: ≤ 100,000 bytes,
+      re-read from disk before the app says done. It cannot promise a particular portal accepts the upload —
+      portals add their own rules, which is why there are no presets.</li>
+    <li><b>My iPhone photo is HEIC.</b> Not supported: HEIC needs an HEVC decoder that cannot be bundled in an
+      MIT binary. Export to JPEG first, then run Kilobyt.</li>
+    <li><b>Can it output exactly 600×600?</b> No — it fits within the box and keeps the aspect ratio, so 4:3
+      becomes 600×450. Cropping would be a guess about what to cut.</li>
+  </ul>
+  <p class="meta" style="margin-top:18px">Longer answers: <a href="https://github.com/nullpointio/kilobyt/issues/4">start here</a>
+    · <a href="https://github.com/nullpointio/kilobyt/issues/1">unsigned exe</a>
+    · <a href="https://github.com/nullpointio/kilobyt/issues/2">HEIC</a>
+    · <a href="https://github.com/nullpointio/kilobyt/issues/3">the size guarantee</a>.
+    Something broken? <a href="https://github.com/nullpointio/kilobyt/issues/new">Open an issue</a> — a first-run report is the most useful thing you can send.</p>
 
   <footer>
     Kilobyt is MIT-licensed and built in the open at
