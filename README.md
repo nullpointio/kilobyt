@@ -44,6 +44,31 @@ No cropping or exact `W × H` output (fit-within only, aspect preserved). No PNG
 (JPEG only). No HEIC/TIFF/WebP/RAW input — convert those first. No PDF tools. No installer, no
 auto-update, no shell integration, no settings that persist between runs.
 
+## Common questions
+
+**Why is the exe unsigned?** There is no code-signing certificate. It is a recurring annual cost with an
+identity-verification process, and this project has no revenue. SmartScreen will warn on first run —
+`More info → Run anyway`, or verify the SHA-256 from the release, or build it yourself.
+
+**Does "under 100 KB" really mean under 100 KB?** Yes, as measured on the written file: ≤ 100,000 bytes,
+re-read from disk before the app reports success. 1 KB = 1000 bytes here, which also satisfies portals that
+count 1024. It does not guarantee a particular portal accepts the upload — portals add their own rules
+(minimum dimensions, aspect ratio, colour profile), which is why there are no presets.
+
+**iPhone photos are HEIC — will it open them?** No. HEIC needs an HEVC decoder that cannot be bundled in an
+MIT-licensed binary. Export to JPEG first (`Windows Photos → Save a copy`) or convert the batch, then run
+Kilobyt.
+
+**My photo is rotated / portrait.** Rotation is baked into the pixels, so the output stays upright without
+an orientation tag being left behind.
+
+**Can it output exactly 600×600?** No. It fits within 600×600 and preserves the aspect ratio, so a 4:3 photo
+becomes 600×450. Cropping would be a guess about what to cut.
+
+Longer answers, and a place to ask: [#1 unsigned exe and SmartScreen](https://github.com/nullpointio/kilobyt/issues/1),
+[#2 HEIC](https://github.com/nullpointio/kilobyt/issues/2), [#3 the size guarantee](https://github.com/nullpointio/kilobyt/issues/3),
+[start here](https://github.com/nullpointio/kilobyt/issues/4).
+
 ## Privacy
 
 No network code is present in the binary: no update check, no telemetry, no crash reporting, no
