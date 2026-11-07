@@ -1,4 +1,4 @@
-# Kilobyt v1.1.0 — native rewrite
+# Kilobyt v1.1.1 — native rewrite
 
 **Make a photo provably fit an upload limit — offline, nothing uploaded.**
 
@@ -7,7 +7,7 @@ message saying the limit is impossible, instead of a file that will be rejected 
 
 ## What changed in 1.1.0
 
-**The exe went from 68 MB to 715 KB.** v1.0.0 shipped a self-contained .NET runtime; this is a native
+**The exe went from 68 MB to 583 KB.** v1.0.0 shipped a self-contained .NET runtime; this is a native
 Rust binary with no runtime, no installer, no DLLs beside it. Same algorithm, same guarantees, one file.
 
 - Rewritten in Rust: the compression engine is a plain library, the GUI is a thin Win32 shell.
@@ -18,8 +18,8 @@ Rust binary with no runtime, no installer, no DLLs beside it. Same algorithm, sa
 
 ## Downloads
 
-- `Kilobyt.exe` — 715 KB, Windows 10/11 x64. No runtime to install.
-- `Kilobyt-v1.1.0-win-x64.zip` — the same exe in a zip, for people who prefer that.
+- `Kilobyt.exe` — 583 KB, Windows 10/11 x64. No runtime to install.
+- `Kilobyt-v1.1.1-win-x64.zip` — the same exe in a zip, for people who prefer that.
 - `SHA256SUMS.txt` — verify your download:
   `powershell -c "(Get-FileHash .\Kilobyt.exe -Algorithm SHA256).Hash"`
 

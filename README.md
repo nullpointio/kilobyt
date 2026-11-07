@@ -18,7 +18,7 @@ smallest achievable size is.
 
 **[Kilobyt.exe — latest release](https://github.com/nullpointio/kilobyt/releases/latest)**
 
-* Windows 10/11, x64, no installer, no runtime to install — a single native exe of about 1 MB.
+* Windows 10/11, x64, no installer, no runtime to install — a single native exe of under 600 KB.
 * The exe is **unsigned**, so Windows SmartScreen will warn you on first run (`More info → Run anyway`).
   SHA-256 hashes for every release are in `SHA256SUMS.txt` on the release page.
 * Windows only. There is no Mac or Linux build.
@@ -78,7 +78,7 @@ nothing between runs.
 
 ## Build
 
-Native Rust, no runtime, no installer. ~1 MB single exe.
+Native Rust, no runtime, no installer. ~600 KB single exe.
 
 ```bash
 cargo test --all --release          # engine tests, run on any OS
