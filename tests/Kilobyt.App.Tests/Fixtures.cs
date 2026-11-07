@@ -218,7 +218,10 @@ internal static class ExifInjector
         using var seg = new BinaryWriter(segment);
         seg.Write((byte)0xFF);
         seg.Write((byte)0xE1);
-        seg.Write((ushort)segmentLength);
+        // JPEG segment lengths are BIG-endian; BinaryWriter would write them little-endian and
+        // GDI+ then reads a bogus length and refuses the file ("JPEG datastream contains no image").
+        seg.Write((byte)(segmentLength >> 8));
+        seg.Write((byte)(segmentLength & 0xFF));
         seg.Write(Encoding.ASCII.GetBytes("Exif\0\0"));
         seg.Write(payload);
         seg.Flush();
