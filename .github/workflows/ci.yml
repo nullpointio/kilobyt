@@ -104,10 +104,11 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAG: ${{ github.ref_name }}
         run: |
-          ls -l release
-          gh release create "$TAG" \
-            release/Kilobyt.exe \
-            release/Kilobyt-*-win-x64.zip \
-            release/SHA256SUMS.txt \
+          # download-artifact preserves the uploaded relative paths, so the exe may sit in a
+          # subdirectory. Collect every file instead of guessing the layout.
+          find release -type f -printf '%p %s bytes\n'
+          mapfile -t ASSETS < <(find release -type f \( -name 'Kilobyt.exe' -o -name '*.zip' -o -name 'SHA256SUMS.txt' \))
+          if [ ${#ASSETS[@]} -lt 3 ]; then echo "expected 3 assets, found ${#ASSETS[@]}"; exit 1; fi
+          gh release create "$TAG" "${ASSETS[@]}" \
             --title "Kilobyt $TAG" \
             --notes-file RELEASE_NOTES.md
