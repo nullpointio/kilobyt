@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>12</LangVersion>
+    <RootNamespace>Kilobyt.App</RootNamespace>
+    <AssemblyName>Kilobyt</AssemblyName>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode>
+    <DebugType>embedded</DebugType>
+    <Version>1.0.0</Version>
+    <Product>Kilobyt</Product>
+    <Company>nullpointio</Company>
+    <Description>Makes a photo provably fit a hard upload limit. Offline.</Description>
+    <!-- allows compiling this project on Linux; the exe is built on windows-latest -->
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Kilobyt.Core\Kilobyt.Core.csproj" />
+  </ItemGroup>
+
+</Project>
