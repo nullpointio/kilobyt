@@ -27,8 +27,9 @@
   "applicationCategory": "UtilitiesApplication",
   "applicationSubCategory": "Image compression",
   "operatingSystem": "Windows 10, Windows 11 (x64)",
-  "softwareVersion": "1.0.0",
-  "fileSize": "71674902",
+  "softwareVersion": "1.1.1",
+  "fileSize": "599040",
+  "screenshot": "https://raw.githubusercontent.com/nullpointio/kilobyt/main/docs/assets/screenshot.png",
   "downloadUrl": "https://github.com/nullpointio/kilobyt/releases/latest",
   "installUrl": "https://github.com/nullpointio/kilobyt/releases/latest",
   "license": "https://github.com/nullpointio/kilobyt/blob/main/LICENSE",
@@ -69,6 +70,10 @@
   .btn.ghost{background:transparent;color:var(--text);border:1px solid var(--line);font-weight:600}
   .btn.ghost:hover{border-color:#3d444d;background:#161b22}
   .meta{color:var(--muted);font-size:13px;margin:0 0 48px}
+  figure.shot{margin:0 0 32px}
+  figure.shot img{display:block;width:100%;height:auto;max-width:640px;
+                  border:1px solid var(--line);border-radius:10px;background:var(--panel)}
+  figure.shot figcaption{color:var(--muted);font-size:13px;margin-top:8px;max-width:640px}
   .sizeviz{display:flex;align-items:center;gap:14px;margin:0 0 48px;padding:18px 20px;
            background:var(--panel);border:1px solid var(--line);border-radius:10px;font-size:14px}
   .bar{height:10px;border-radius:5px;background:#30363d}
@@ -109,10 +114,16 @@
   </p>
 
   <div class="cta">
-    <a class="btn" href="https://github.com/nullpointio/kilobyt/releases/latest">Download Kilobyt.exe</a>
+    <a class="btn" href="https://github.com/nullpointio/kilobyt/releases/latest/download/Kilobyt.exe">Download Kilobyt.exe</a>
     <a class="btn ghost" href="https://github.com/nullpointio/kilobyt">Source on GitHub</a>
   </div>
-  <p class="meta">Windows 10/11 · x64 · no installer · no .NET runtime needed · unsigned (SmartScreen will warn)</p>
+  <p class="meta">v1.1.1 · 583 KB (599,040 bytes) · Windows 10/11 · x64 · no installer · no runtime needed · unsigned (SmartScreen will warn)</p>
+
+  <figure class="shot">
+    <img src="assets/screenshot.png" width="762" height="628"
+         alt="The Kilobyt window: a 'Drop photos here' area with an Add photos button, an empty file list, a Max size field showing 100 KB, optional limit dimensions W and H, save-location options, and a Compress button.">
+    <figcaption>Real capture of the shipped binary, running under Wine. Windows CI runs its <code>-selftest</code> before every release.</figcaption>
+  </figure>
 
   <div class="sizeviz">
     <span class="bar big"></span><b>4.2 MB</b>
@@ -161,14 +172,25 @@
     <li>No PDF tools, no installer, no auto-update, no remembered settings.</li>
   </ul>
 
-  <h2>Verify it yourself</h2>
-  <ul class="plain yes">
-    <li>116 unit tests on Linux cover the search, resampling, naming, cancellation and error codes.</li>
-    <li>Windows integration tests cover the real encoder, the on-disk size invariant, EXIF removal and determinism.</li>
-    <li>Every release ships <code>SHA256SUMS.txt</code>; the source is MIT and builds with one command.</li>
-  </ul>
-
+  <h2>Verify the download</h2>
+  <p class="meta" style="margin:0 0 14px">v1.1.1 · <code>Kilobyt.exe</code> · 599,040 bytes · SHA-256:</p>
+  <pre>41553401bf39eaad29af6917e316a9f4cb9f932eb79b983e3e8048e88c7389db</pre>
+  <p style="font-size:14.5px;color:#a9b4c0;margin:14px 0 0">
+    Compare it on Windows:
+  </p>
   <pre>powershell -c "(Get-FileHash .\Kilobyt.exe -Algorithm SHA256).Hash"</pre>
+  <p style="font-size:14.5px;color:#a9b4c0">
+    The same value is published in
+    <a href="https://github.com/nullpointio/kilobyt/releases/latest/download/SHA256SUMS.txt">SHA256SUMS.txt</a>
+    on the release page, written by the CI job that built the exe. If it does not match, do not run the file.
+  </p>
+
+  <h2>Verify the code</h2>
+  <ul class="plain yes">
+    <li>61 engine tests (compression search, resampling, EXIF, naming, error codes) run on Linux and Windows CI.</li>
+    <li>Windows CI runs the compiled <code>kilobyt.exe -selftest</code> — real encoder, on-disk size invariant, EXIF removal, determinism.</li>
+    <li>Source is MIT and builds with one command; the exe is 583 KB because nothing is bundled but the app.</li>
+  </ul>
 
   <div class="note">
     <b>The exe is unsigned.</b> Windows SmartScreen will show “Windows protected your PC” on first run —

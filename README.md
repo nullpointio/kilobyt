@@ -2,14 +2,18 @@
 
 **Make a photo provably fit an upload limit. Offline, no account, nothing uploaded.**
 
-Form portals say *"photo must be under 100 KB"* (often with a pixel limit too), your photo isn't,
-and every free tool that fixes it wants you to upload an identity document to a stranger's server.
+- **What it is:** one native Windows exe that writes a JPEG at or under the exact byte limit you type in,
+  or writes nothing and tells you the smallest size that is achievable.
+- **Who it's for:** people filling visa, ID, job and government forms that say *"photo must be under
+  100 KB"* and who will not upload a passport photo to a free website to get it done.
+- **Why offline:** the binary contains no network code — no update check, no telemetry, no upload path —
+  so an identity document never leaves the machine it was already on.
+- **Why 583 KB matters:** no runtime, no installer, no DLLs beside it. One file you can copy to a
+  locked-down or offline machine and run without admin rights.
+- **How to verify:** SHA-256 `41553401bf39eaad29af6917e316a9f4cb9f932eb79b983e3e8048e88c7389db`, compared
+  against `SHA256SUMS.txt` in the release; source is MIT and builds with `cargo build --release`.
 
-Kilobyt is one small Windows exe. You drop photos in, type the limit the form gives you, and you get
-a file that is **at or under that limit** — or no file at all, with an honest message saying what the
-smallest achievable size is.
-
-![Kilobyt](docs/assets/screenshot.png)
+![The Kilobyt window: a drop area for photos, a file list, a Max size field in KB, optional limit dimensions, and a Compress button](docs/assets/screenshot.png)
 
 > Screenshot is a real capture of the running binary (under Wine on Linux, so the widget theme is
 > plainer than on Windows 11). Windows CI runs the same exe's `-selftest` on every push.
@@ -18,7 +22,7 @@ smallest achievable size is.
 
 **[Kilobyt.exe — latest release](https://github.com/nullpointio/kilobyt/releases/latest)**
 
-* Windows 10/11, x64, no installer, no runtime to install — a single native exe of under 600 KB.
+* Windows 10/11, x64, no installer, no runtime to install — a single native exe, 583 KB.
 * The exe is **unsigned**, so Windows SmartScreen will warn you on first run (`More info → Run anyway`).
   SHA-256 hashes for every release are in `SHA256SUMS.txt` on the release page.
 * Windows only. There is no Mac or Linux build.
@@ -78,7 +82,7 @@ nothing between runs.
 
 ## Build
 
-Native Rust, no runtime, no installer. ~600 KB single exe.
+Native Rust, no runtime, no installer. 583 KB single exe.
 
 ```bash
 cargo test --all --release          # engine tests, run on any OS
