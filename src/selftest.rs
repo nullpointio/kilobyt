@@ -120,6 +120,11 @@ fn temp_root() -> PathBuf {
     dir
 }
 
+/// The 12 MP fixture `-mem` measures: 4000×3000, deterministic, generated in RAM.
+pub fn twelve_megapixel_jpeg() -> Vec<u8> {
+    fixture_jpeg(WIDTH, HEIGHT)
+}
+
 /// A deterministic 4000×3000 photo-like JPEG: noise plus a slow gradient so the
 /// encoder sees structure, not just entropy. Local PRNG: no fixture files, no deps.
 fn fixture_jpeg(w: u32, h: u32) -> Vec<u8> {

@@ -14,6 +14,15 @@ message saying the limit is impossible, instead of a file that will be rejected 
   `LegalCopyright=MIT License — nullpointio`.
 - It is compiled into the same resource object as the icon and manifest, so there is no second file to
   keep in sync. `-version` still prints the crate version, which now matches. No behaviour change.
+- **Peak memory is lower and now measurable.** The JPEG output buffer is allocated once per file and
+  reused by every quality probe (grown to ~1.25× the bytes needed instead of doubling, and dropped at
+  each downscale boundary); the source file's bytes are freed as soon as the pixels are decoded; alpha
+  is flattened in place. A 12 MP photo that needs 126 probes to reach 100 KB drops from 96.2 MiB to
+  78.9 MiB peak RSS (4:4:4 source) and from 87.7 MiB to 71.1 MiB (4:2:0 source). Measure it yourself
+  with `kilobyt -mem path\to\photo.jpg`.
+- **The 80 MPix cap now fires before decoding.** Dimensions come from the container header, so an
+  oversized image is refused with `E_TOO_MANY_PIXELS` instead of allocating its RGB24 buffer first
+  (240 MB at the cap).
 
 ## What changed in 1.1.0
 

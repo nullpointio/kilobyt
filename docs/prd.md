@@ -70,7 +70,10 @@ This section is the contract. Numbers are exact; do not "improve" them without a
 
 - `targetBytes = TargetKb × 1000`. **1 KB = 1000 bytes in v1.** Rationale: a portal that means 1024 bytes/KB still accepts the smaller file, and a portal that means 1000 is satisfied exactly. Documented in the UI tooltip on the KB field. Not configurable in v1.
 - `q` = JPEG quality, integer, **30 ≤ q ≤ 95**. q=100 and q<30 are never encoded.
-- Input limits: file ≤ 200 MB; decoded pixels ≤ 80,000,000; either dimension ≥ 1. Violations are per-file errors, never crashes.
+- Input limits: file ≤ 200 MB; decoded pixels ≤ 80,000,000; either dimension ≥ 1. The pixel
+  limit is checked against the **container header** first, so an oversized image is refused
+  before a 3-bytes-per-pixel buffer is ever allocated (`E_TOO_MANY_PIXELS`). Violations are
+  per-file errors, never crashes.
 
 ### 5.2 Pipeline, per file (exact order)
 
@@ -90,6 +93,7 @@ This section is the contract. Numbers are exact; do not "improve" them without a
 11. **Verify**: write to `{final}.part` in the destination directory, `Flush`, re-read the file length from disk. If length > `targetBytes` (encoder did not reproduce the probe size), decrement q by 1 and retry, max 3 attempts; after that → `E_UNSTABLE`, delete the `.part`.
 12. **Commit**: `File.Move(part, final)` (never overwrite an existing file — the name is pre-resolved by `OutputNamer`). Delete `.part` on any exception or cancellation.
 13. **Strip**: the output contains no EXIF, no XMP, no GPS, no IPTC, no comment segment. Only JFIF APP0 (density) and the frame tables. No ICC profile is written; sRGB is assumed.
+14. **Memory**: the encoder's output buffer is allocated once per file and reused by every probe in step 6; the source file's bytes are released as soon as the pixels are decoded; at each downscale boundary the outgoing scaled buffer and the encoder output are released before the replacement is allocated. The pixel cap in §5.1 is checked from the header first, so an oversized image never allocates its RGB24 buffer.
 
 ### 5.3 Termination and budget
 
@@ -222,7 +226,8 @@ Every message is shown in the row's Status cell; the full text goes into the end
 | `E_EMPTY` | 0-byte file | `Empty file.` |
 | `E_DECODE` | corrupt/truncated/unsupported codec data | `Cannot read this image — the file may be damaged or use an unsupported format.` |
 | `E_FORMAT` | extension not .jpg/.jpeg/.png/.bmp | `Only JPG, PNG and BMP are supported. Convert HEIC/TIFF/WebP first.` |
-| `E_TOOBIG` | > 200 MB or > 80 MPix | `Too large: 210 MP. Limit is 80 MP.` (actual numbers) |
+| `E_TOOBIG` | > 200 MB | `Too large: 210 MB. Limit is 200 MB.` (actual numbers) |
+| `E_TOO_MANY_PIXELS` | > 80 MPix, rejected from the header before any pixel buffer is allocated | `Too large: 210 MP. Limit is 80 MP.` (actual numbers) |
 | `E_TOO_SMALL` | target unreachable at 64 px / q30 | `Cannot reach 5 KB. The smallest this photo can be is 41 KB at 96×72.` |
 | `E_ACCESS` | read-only or missing output dir | `Cannot write to C:\Forms — folder is read-only or missing.` |
 | `E_NAME` | 999 name collisions | `Too many files named X_fit — rename the source files.` |
@@ -273,7 +278,7 @@ Single window, title **`Kilobyt`**, ~760×620, min 640×520, resizable, per-moni
 | 1 | `System.Drawing.Common` is Windows-only; `Kilobyt.Core` must not reference it | Eng | Interface split in §5.8; CI fails if Core's project file references any native/Windows package. |
 | 2 | JPEG encoder non-determinism across Windows versions | Eng | Determinism asserted on the CI image only; the size invariant is re-verified from disk (§5.2.11). |
 | 3 | Unsigned exe + SmartScreen | CPO | Documented in release notes with SHA256 (decision.md R1). |
-| 4 | Memory on 80 MPix images (≈240 MB buffer + encodes) | Eng | Cap at 80 MPix; sequential batch; no parallel encoding. |
+| 4 | Memory on 80 MPix images (≈240 MB buffer + encodes) | Eng | Cap at 80 MPix, enforced from the header before decoding; sequential batch; no parallel encoding; the encoder buffer is reused across probes and released at downscale boundaries. `kilobyt -mem <photo>` reports peak RSS for a 12 MP run so regressions are measurable. |
 | 5 | Users expecting exact 600×600 | CPO | Result column shows actual pixels; out-of-scope list published in the README. |
 
 ---
