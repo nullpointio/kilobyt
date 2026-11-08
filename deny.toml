@@ -1,0 +1,41 @@
+# cargo-deny policy for Kilobyt.
+# Checked by .github/workflows/deps.yml (`cargo deny check licenses bans sources`).
+# Keep the allow-list here in sync with DEPENDENCIES.md.
+
+[graph]
+# Empty = evaluate the whole dependency graph, including Windows-only deps.
+# Resolution only: nothing is compiled, so this works on any host.
+targets = []
+all-features = true
+
+[output]
+feature-depth = 1
+
+[licenses]
+version = 2
+# Permissive licenses only. A crate licensed under a disallowed license (or an
+# SPDX expression with no allowed alternative) fails the check.
+allow = [
+    "MIT",
+    "Apache-2.0",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "ISC",
+    "Unicode-3.0",
+    "Zlib",
+    "MPL-2.0",
+]
+confidence-threshold = 0.8
+
+[bans]
+multiple-versions = "warn"
+wildcards = "allow"
+highlight = "all"
+# GPL/AGPL/SSPL are rejected by the allow-list above: anything not listed is denied.
+deny = []
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]
+allow-git = []

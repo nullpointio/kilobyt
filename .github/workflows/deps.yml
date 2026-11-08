@@ -1,0 +1,114 @@
+name: deps
+
+# Dependency hygiene: advisories, licenses, and freshness.
+#
+# The `Dependency audit` job is the check that gates releases (see DEPENDENCIES.md).
+# A tag build is only released once this job has passed on that commit; the
+# `Dependency freshness` job is advisory and reports through the tracking issue.
+
+on:
+  schedule:
+    # Weekly, Mondays 06:17 UTC.
+    - cron: '17 6 * * 1'
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - Cargo.lock
+      - Cargo.toml
+      - deny.toml
+      - .github/workflows/deps.yml
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: deps-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  audit:
+    name: Dependency audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+
+      # Prebuilt binaries: `cargo install` would add several minutes per run.
+      - name: Install audit tools
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-audit,cargo-deny
+
+      # Resolution only - nothing is compiled, so Windows-only crates are fine.
+      - name: Check the workspace resolves
+        run: cargo metadata --no-deps --format-version 1 > /dev/null
+
+      - name: Ensure Cargo.lock exists
+        run: |
+          if [ ! -f Cargo.lock ]; then
+            echo "::warning::Cargo.lock is not committed; generating one for this run. Commit it so audit results are reproducible."
+            cargo generate-lockfile
+          fi
+
+      - name: cargo audit (any advisory fails this job)
+        run: |
+          set -o pipefail
+          cargo audit 2>&1 | tee "$RUNNER_TEMP/audit.txt"
+
+      - name: cargo deny (licenses, bans, sources)
+        run: |
+          set -o pipefail
+          cargo deny check licenses bans sources 2>&1 | tee "$RUNNER_TEMP/deny.txt"
+
+      - name: Open or refresh the tracking issue
+        if: failure()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: bash .github/scripts/deps-report.sh
+
+  freshness:
+    name: Dependency freshness
+    needs: audit
+    # Independent of the audit result: report both problems in one pass. Skips
+    # only when the run itself was cancelled.
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Install cargo-outdated
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-outdated
+
+      - name: Ensure Cargo.lock exists
+        run: |
+          if [ ! -f Cargo.lock ]; then
+            echo "::warning::Cargo.lock is not committed; generating one for this run."
+            cargo generate-lockfile
+          fi
+
+      # Direct dependencies only (`--root-deps-only`): transitive churn is handled
+      # by Dependabot, so it must not make this check permanently noisy.
+      - name: cargo outdated (fails when a direct dependency is behind)
+        run: |
+          set -o pipefail
+          cargo outdated --workspace --root-deps-only --exit-code 1 2>&1 | tee "$RUNNER_TEMP/outdated.txt"
+
+      - name: Open or refresh the tracking issue
+        if: failure()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: bash .github/scripts/deps-report.sh

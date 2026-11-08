@@ -1,0 +1,50 @@
+version: 2
+
+updates:
+  # Rust crates. Minor + patch land as one grouped PR; majors get their own PR
+  # so they can be reviewed (and reverted) independently.
+  - package-ecosystem: cargo
+    directory: "/"
+    target-branch: main
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: Etc/UTC
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: deps
+    labels:
+      - dependencies
+    groups:
+      rust-deps:
+        patterns:
+          - "*"
+        update-types:
+          - minor
+          - patch
+      rust-deps-major:
+        patterns:
+          - "*"
+        update-types:
+          - major
+
+  # Keep the workflow actions themselves current (pinned major versions rot too).
+  - package-ecosystem: github-actions
+    directory: "/"
+    target-branch: main
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: Etc/UTC
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: ci
+    labels:
+      - dependencies
+      - github-actions
+    groups:
+      github-actions:
+        patterns:
+          - "*"

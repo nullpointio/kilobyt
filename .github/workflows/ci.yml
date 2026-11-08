@@ -26,6 +26,16 @@ jobs:
 
       - uses: Swatinem/rust-cache@v2
 
+      # Release gate: this job runs on every push, PR and tag, so the check exists
+      # on the exact commit being released. Policy: DEPENDENCIES.md.
+      - name: Install cargo-audit
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-audit
+
+      - name: Dependency audit (blocks release)
+        run: cargo audit
+
       - name: Format
         run: cargo fmt --all -- --check
 
