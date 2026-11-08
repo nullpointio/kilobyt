@@ -26,6 +26,8 @@ use std::path::{Path, PathBuf};
 pub const E_EMPTY: &str = "E_EMPTY";
 pub const E_FORMAT: &str = "E_FORMAT";
 pub const E_TOOBIG: &str = "E_TOOBIG";
+/// More than [`MAX_PIXELS`] decoded pixels; refused from the header when possible.
+pub const E_TOO_MANY_PIXELS: &str = "E_TOO_MANY_PIXELS";
 pub const E_DECODE: &str = "E_DECODE";
 pub const E_TOO_SMALL: &str = "E_TOO_SMALL";
 pub const E_ACCESS: &str = "E_ACCESS";
@@ -38,6 +40,12 @@ pub const E_CANCELLED: &str = "E_CANCELLED";
 pub const MIN_QUALITY: u8 = 30;
 /// Highest JPEG quality the engine will ever encode (PRD §5.1).
 pub const MAX_QUALITY: u8 = 95;
+
+/// Hard cap on decoded pixels, checked against the file header before anything is
+/// allocated. 80 MPix is 240 MB as RGB24 — the largest single allocation this tool
+/// will make — and matches the frozen PRD limit (docs/prd.md §5.1), so no file that
+/// used to work stops working. Files above it fail with [`E_TOO_MANY_PIXELS`].
+pub const MAX_PIXELS: u64 = 80_000_000;
 
 /// Per-file settings. `0` means "no limit" for the dimension fields.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -133,6 +141,23 @@ pub fn fit_cancellable(
     fit::run(file, name, s, cancel, fit::PROBE_BUDGET)
 }
 
+/// Same as [`fit`], but takes ownership of the file bytes so the engine can free
+/// them as soon as the pixels are decoded — for a 12 MP JPEG that is ~17 MB less
+/// during the quality search. Use this when you read the file yourself.
+pub fn fit_owned(file: Vec<u8>, name: &str, s: &Settings) -> Outcome {
+    fit::run_owned(file, name, s, &fit::NEVER_CANCEL, fit::PROBE_BUDGET)
+}
+
+/// [`fit_owned`] with cancellation, for the batch worker.
+pub fn fit_cancellable_owned(
+    file: Vec<u8>,
+    name: &str,
+    s: &Settings,
+    cancel: &std::sync::atomic::AtomicBool,
+) -> Outcome {
+    fit::run_owned(file, name, s, cancel, fit::PROBE_BUDGET)
+}
+
 /// Read `path` and fit it. A vanished file reports `E_ACCESS` / `File is gone.`
 pub fn fit_file(path: &Path, s: &Settings) -> Outcome {
     let name = path
@@ -140,7 +165,7 @@ pub fn fit_file(path: &Path, s: &Settings) -> Outcome {
         .map(|n| n.to_string_lossy().into_owned())
         .unwrap_or_default();
     match std::fs::read(path) {
-        Ok(bytes) => fit(&bytes, &name, s),
+        Ok(bytes) => fit_owned(bytes, &name, s),
         Err(_) => Outcome::fail(E_ACCESS, "File is gone.".to_string()),
     }
 }
@@ -148,6 +173,13 @@ pub fn fit_file(path: &Path, s: &Settings) -> Outcome {
 /// Plan output dimensions: fit within the limits, never upscale, aspect error ≤ 1 px.
 pub fn plan_size(w: u32, h: u32, max_w: u32, max_h: u32) -> (u32, u32) {
     fit::plan_size(w, h, max_w, max_h)
+}
+
+/// Pixel dimensions from the container header alone; no pixel buffer is allocated.
+/// `None` when the format is not recognised. Use it to check [`MAX_PIXELS`] before
+/// paying for a decode.
+pub fn image_dimensions(file: &[u8]) -> Option<(u32, u32)> {
+    fit::header_dimensions(file)
 }
 
 /// Trim trailing dots/spaces (Windows rule); empty becomes `image`.
@@ -285,6 +317,42 @@ pub(crate) mod testutil {
             .write_to(&mut Cursor::new(&mut out), image::ImageFormat::Bmp)
             .expect("bmp fixture");
         out
+    }
+
+    /// Rewrite the frame-header dimensions of a JPEG (any SOFn) in place: a small
+    /// file can then claim an enormous canvas without paying for the pixels, which
+    /// is exactly what the pixel cap must reject from the header alone.
+    pub fn with_dimensions(jpeg: &[u8], w: u16, h: u16) -> Vec<u8> {
+        let mut out = jpeg.to_vec();
+        assert!(
+            out.len() > 2 && out[0] == 0xFF && out[1] == 0xD8,
+            "need SOI"
+        );
+        let mut i = 2usize;
+        while i + 8 < out.len() {
+            if out[i] != 0xFF {
+                i += 1;
+                continue;
+            }
+            let marker = out[i + 1];
+            if marker == 0x01 || (0xD0..=0xD9).contains(&marker) {
+                i += 2;
+                continue;
+            }
+            if marker == 0xDA {
+                break; // metadata is over; no frame header found
+            }
+            let len = u16::from_be_bytes([out[i + 2], out[i + 3]]) as usize;
+            let is_sof = matches!(marker, 0xC0..=0xC3 | 0xC5..=0xC7 | 0xC9..=0xCB | 0xCD..=0xCF);
+            if is_sof {
+                // SOFn: len(2) precision(1) height(2) width(2) …
+                out[i + 5..i + 7].copy_from_slice(&h.to_be_bytes());
+                out[i + 7..i + 9].copy_from_slice(&w.to_be_bytes());
+                return out;
+            }
+            i += 2 + len;
+        }
+        panic!("no SOF marker in fixture");
     }
 
     /// Minimal EXIF APP1 carrying only IFD0 Orientation. JPEG segment lengths are

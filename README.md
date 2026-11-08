@@ -98,6 +98,11 @@ compression search, resampling, EXIF handling and naming are tested on any platf
 is a thin Win32 shell (no GUI framework). CI runs `cargo test` and clippy on Linux, runs the tests plus
 `kilobyt.exe -selftest` on `windows-latest`, and publishes the release on a `v*` tag.
 
+Memory is measured, not estimated: `kilobyt -mem` fits one 12 MP image (the built-in fixture, or a path
+you pass) and prints the peak RSS the OS recorded for that fit. One JPEG output buffer is reused by every
+quality probe, the decoded pixels are capped at 80 MPix from the file header before anything is allocated,
+and a batch never holds two files' pixels at once.
+
 The product spec, including the exact algorithm and its acceptance criteria, is in [`docs/prd.md`](docs/prd.md).
 The original C#/.NET implementation is kept on the `csharp-v1` branch for reference.
 

@@ -1422,7 +1422,7 @@ fn worker(
             }
         };
 
-        let outcome = kilobyt::fit_cancellable(&bytes, &name, &settings, &cancel);
+        let outcome = kilobyt::fit_cancellable_owned(bytes, &name, &settings, &cancel);
         if !outcome.ok {
             let status = if outcome.err_code == E_CANCELLED {
                 Status::Cancelled

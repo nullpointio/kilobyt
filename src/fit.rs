@@ -5,8 +5,8 @@ use std::sync::atomic::{AtomicBool, Ordering};
 
 use crate::exif;
 use crate::{
-    Outcome, Settings, E_BUDGET, E_CANCELLED, E_DECODE, E_EMPTY, E_FORMAT, E_TOOBIG, E_TOO_SMALL,
-    MAX_QUALITY, MIN_QUALITY,
+    Outcome, Settings, E_BUDGET, E_CANCELLED, E_DECODE, E_EMPTY, E_FORMAT, E_TOOBIG,
+    E_TOO_MANY_PIXELS, E_TOO_SMALL, MAX_PIXELS, MAX_QUALITY, MIN_QUALITY,
 };
 
 /// Hard cap on encode probes per file (PRD §5.3).
@@ -18,7 +18,8 @@ pub(crate) const MIN_DIMENSION: u32 = 64;
 const DOWNSCALE_FACTOR: f64 = 0.85;
 
 pub(crate) const MAX_FILE_BYTES: u64 = 200_000_000;
-pub(crate) const MAX_PIXELS: u64 = 80_000_000;
+// The pixel cap itself lives in lib.rs (`crate::MAX_PIXELS`) so the public surface
+// and the docs can state it; it is enforced here before any buffer is allocated.
 
 /// A cancellation flag that is never set, for the non-cancellable API.
 pub(crate) static NEVER_CANCEL: AtomicBool = AtomicBool::new(false);
@@ -60,8 +61,9 @@ pub(crate) fn msg_too_big_bytes(bytes: u64) -> String {
 
 pub(crate) fn msg_too_big_pixels(pixels: u64) -> String {
     format!(
-        "Too large: {} MP. Limit is 80 MP.",
-        format_1dp(pixels, 1_000_000)
+        "Too large: {} MP. Limit is {} MP.",
+        format_1dp(pixels, 1_000_000),
+        MAX_PIXELS / 1_000_000
     )
 }
 
@@ -141,21 +143,30 @@ fn decode(file: &[u8]) -> Option<Decoded> {
     }
 
     let pixels = if img.color().has_alpha() {
-        let rgba = img.into_rgba8();
-        let src = rgba.as_raw();
-        let mut out = vec![0u8; (w as usize) * (h as usize) * 3];
-        for (px, dst) in src.chunks_exact(4).zip(out.chunks_exact_mut(3)) {
-            let a = px[3] as u32;
-            if a == 255 {
-                dst.copy_from_slice(&px[..3]);
+        // Composite in place: packing RGBA down to RGB in the same buffer keeps
+        // one allocation (4 bytes/px) instead of holding RGBA and RGB at once.
+        let mut raw = img.into_rgba8().into_raw();
+        let (mut src, mut dst) = (0usize, 0usize);
+        while src + 3 < raw.len() {
+            let a = u32::from(raw[src + 3]);
+            let (r, g, b) = if a == 255 {
+                (raw[src], raw[src + 1], raw[src + 2])
             } else {
                 // Composite over white, round-half-up (§5.2.2).
-                for c in 0..3 {
-                    dst[c] = ((px[c] as u32 * a + 255 * (255 - a) + 127) / 255) as u8;
-                }
-            }
+                let over = |c: u8| {
+                    let c = u32::from(c);
+                    ((c * a + 255 * (255 - a) + 127) / 255) as u8
+                };
+                (over(raw[src]), over(raw[src + 1]), over(raw[src + 2]))
+            };
+            raw[dst] = r;
+            raw[dst + 1] = g;
+            raw[dst + 2] = b;
+            src += 4;
+            dst += 3;
         }
-        out
+        raw.truncate(dst);
+        raw
     } else {
         img.into_rgb8().into_raw()
     };
@@ -171,6 +182,14 @@ fn decode(file: &[u8]) -> Option<Decoded> {
         dpi: exif::choose_dpi(exif::jfif_density(file)),
         orientation: exif::orientation(file),
     })
+}
+
+/// Width×height read from the container header alone — no pixel buffer allocated.
+pub(crate) fn header_dimensions(file: &[u8]) -> Option<(u32, u32)> {
+    let reader = image::ImageReader::new(std::io::Cursor::new(file))
+        .with_guessed_format()
+        .ok()?;
+    reader.into_dimensions().ok()
 }
 
 // ---------------------------------------------------------------------------
@@ -251,28 +270,98 @@ pub(crate) fn box_resize(src: &[u8], sw: u32, sh: u32, dw: u32, dh: u32) -> Vec<
 // Encode
 // ---------------------------------------------------------------------------
 
-/// Encode RGB24 as baseline JPEG at `q` with the JFIF density patched in.
-/// The encoder writes no EXIF/XMP/GPS/comment segments at all (PRD §5.2.13).
-pub(crate) fn encode_rgb_jpeg(
-    pixels: &[u8],
-    w: u32,
-    h: u32,
-    q: u8,
-    dpi: u16,
-) -> Result<Vec<u8>, String> {
-    if w == 0 || h == 0 || w > 65_535 || h > 65_535 {
-        return Err("unsupported dimensions".to_string());
+/// JPEG output buffer, allocated once per file and reused by every quality probe.
+///
+/// The quality search encodes the same picture at up to ~40 different qualities;
+/// each output can be tens of MB at high q, so a fresh `Vec` per probe meant the
+/// allocator held (and zeroed, and grew) a new multi-MB buffer each time. One
+/// retained buffer keeps the run's encode footprint flat at the largest single
+/// output seen, and lets the final encode hand its buffer straight to `Outcome`.
+pub(crate) struct JpegSink {
+    buf: Vec<u8>,
+    /// Buffers the allocator handed out (growth events), for byte accounting.
+    allocations: u32,
+}
+
+/// Write adapter that grows the retained buffer in tight steps instead of
+/// letting `Vec` double it. A doubled buffer costs up to twice the size of the
+/// JPEG we just produced, and the copy at the reallocation moment keeps the old
+/// and new allocations alive together. Growing to ~1.25x the bytes needed caps
+/// both the resident buffer and that transient.
+struct RetainedBuf<'a> {
+    buf: &'a mut Vec<u8>,
+}
+
+impl std::io::Write for RetainedBuf<'_> {
+    fn write(&mut self, data: &[u8]) -> std::io::Result<usize> {
+        let need = self.buf.len() + data.len();
+        if need > self.buf.capacity() {
+            // Round up to 64 KiB so the header and per-scan writes do not each
+            // trigger a reallocation.
+            let target = need.saturating_add(need / 4).saturating_add(65_535) & !65_535;
+            self.buf.reserve_exact(target - self.buf.len());
+        }
+        self.buf.extend_from_slice(data);
+        Ok(data.len())
     }
-    if pixels.len() != (w as usize) * (h as usize) * 3 {
-        return Err("pixel buffer does not match dimensions".to_string());
+
+    fn flush(&mut self) -> std::io::Result<()> {
+        Ok(())
     }
-    let quality = q.clamp(MIN_QUALITY, MAX_QUALITY);
-    let mut out = Vec::new();
-    let mut enc = image::codecs::jpeg::JpegEncoder::new_with_quality(&mut out, quality);
-    enc.encode(pixels, w, h, image::ExtendedColorType::Rgb8)
-        .map_err(|e| e.to_string())?;
-    patch_jfif_density(&mut out, dpi);
-    Ok(out)
+}
+
+impl JpegSink {
+    fn new() -> Self {
+        Self {
+            buf: Vec::new(),
+            allocations: 0,
+        }
+    }
+
+    /// Encode RGB24 as baseline JPEG at `q` with the JFIF density patched in.
+    /// The encoder writes no EXIF/XMP/GPS/comment segments (PRD §5.2.13).
+    ///
+    /// Returns the encoded length; the bytes stay in the sink's buffer.
+    fn encode(&mut self, pixels: &[u8], w: u32, h: u32, q: u8, dpi: u16) -> Result<usize, String> {
+        if w == 0 || h == 0 || w > 65_535 || h > 65_535 {
+            return Err("unsupported dimensions".to_string());
+        }
+        if pixels.len() != (w as usize) * (h as usize) * 3 {
+            return Err("pixel buffer does not match dimensions".to_string());
+        }
+        let quality = q.clamp(MIN_QUALITY, MAX_QUALITY);
+        let before = self.buf.capacity();
+        self.buf.clear();
+        {
+            let mut out = RetainedBuf { buf: &mut self.buf };
+            let mut enc = image::codecs::jpeg::JpegEncoder::new_with_quality(&mut out, quality);
+            enc.encode(pixels, w, h, image::ExtendedColorType::Rgb8)
+                .map_err(|e| e.to_string())?;
+        }
+        if self.buf.capacity() != before {
+            self.allocations += 1;
+        }
+        patch_jfif_density(&mut self.buf, dpi);
+        Ok(self.buf.len())
+    }
+
+    fn bytes(&self) -> &[u8] {
+        &self.buf
+    }
+
+    /// Hand the finished JPEG to the caller (final encode only).
+    fn take(&mut self) -> Vec<u8> {
+        std::mem::take(&mut self.buf)
+    }
+
+    /// Drop the output buffer without producing anything.
+    ///
+    /// Called at a downscale boundary: the next probe encodes a smaller image, and
+    /// the resample needs its destination buffer at the same moment, so keeping
+    /// the old (larger) output alive would add both to the peak.
+    fn release(&mut self) {
+        self.buf = Vec::new();
+    }
 }
 
 /// Rewrite the JFIF APP0 density (units = inches). No-op when the encoder did not
@@ -313,6 +402,8 @@ struct Prober<'a> {
     best_h: u32,
     dpi: u16,
     cancel: &'a AtomicBool,
+    /// One output buffer shared by every probe and the final encode.
+    enc: JpegSink,
 }
 
 impl Prober<'_> {
@@ -325,8 +416,10 @@ impl Prober<'_> {
             return Err(Stop::Budget);
         }
         self.probes += 1;
-        let bytes = encode_rgb_jpeg(px, w, h, q, self.dpi).map_err(|_| Stop::Encode)?;
-        let len = bytes.len() as u64;
+        let len = self
+            .enc
+            .encode(px, w, h, q, self.dpi)
+            .map_err(|_| Stop::Encode)? as u64;
         if len < self.best_bytes {
             self.best_bytes = len;
             self.best_quality = q;
@@ -374,6 +467,33 @@ impl Prober<'_> {
 // Pipeline
 // ---------------------------------------------------------------------------
 
+/// The encoded source file, either borrowed from the caller or owned by the engine.
+///
+/// The bytes are only needed for the extension rule, the EXIF/JFIF probes and the
+/// decode. Once the pixels exist they are dead weight — for a 12 MP JPEG that is
+/// ~17 MB, and for a 200 MB input it is most of the run's footprint — so an owned
+/// input is released before the quality search starts.
+pub(crate) enum Input<'a> {
+    Borrowed(&'a [u8]),
+    Owned(Vec<u8>),
+}
+
+impl Input<'_> {
+    fn bytes(&self) -> &[u8] {
+        match self {
+            Self::Borrowed(b) => b,
+            Self::Owned(v) => v,
+        }
+    }
+
+    /// Free the file bytes if the engine owns them; a borrowed input is untouched.
+    fn release(&mut self) {
+        if matches!(self, Self::Owned(_)) {
+            *self = Self::Borrowed(&[]);
+        }
+    }
+}
+
 pub(crate) fn run(
     file: &[u8],
     name: &str,
@@ -381,6 +501,27 @@ pub(crate) fn run(
     cancel: &AtomicBool,
     budget: u32,
 ) -> Outcome {
+    run_input(Input::Borrowed(file), name, s, cancel, budget)
+}
+
+pub(crate) fn run_owned(
+    file: Vec<u8>,
+    name: &str,
+    s: &Settings,
+    cancel: &AtomicBool,
+    budget: u32,
+) -> Outcome {
+    run_input(Input::Owned(file), name, s, cancel, budget)
+}
+
+fn run_input(
+    mut input: Input<'_>,
+    name: &str,
+    s: &Settings,
+    cancel: &AtomicBool,
+    budget: u32,
+) -> Outcome {
+    let file = input.bytes();
     // 1. Validate. Empty beats everything else, then the extension rule.
     if file.is_empty() {
         return Outcome::fail(E_EMPTY, msg_empty());
@@ -395,13 +536,23 @@ pub(crate) fn run(
         return Outcome::fail(E_CANCELLED, msg_cancelled());
     }
 
-    // 2. Decode.
+    // 2. Decode. Refuse an oversized image from its header first: the pixel cap
+    //    is only worth anything if it fires before the pixel buffer is allocated.
+    if let Some((w, h)) = header_dimensions(file) {
+        let pixels = u64::from(w) * u64::from(h);
+        if pixels > MAX_PIXELS {
+            return Outcome::fail(E_TOO_MANY_PIXELS, msg_too_big_pixels(pixels));
+        }
+    }
     let Some(decoded) = decode(file) else {
         return Outcome::fail(E_DECODE, msg_decode());
     };
+    // The pixels exist now: an owned file buffer is dead weight from here on.
+    input.release();
+    // Backstop: a format whose header under-reported its real size.
     let pixels = decoded.pixels.len() as u64 / 3;
     if pixels > MAX_PIXELS {
-        return Outcome::fail(E_TOOBIG, msg_too_big_pixels(pixels));
+        return Outcome::fail(E_TOO_MANY_PIXELS, msg_too_big_pixels(pixels));
     }
 
     // 3. Bake orientation so the output needs no tag.
@@ -439,6 +590,7 @@ pub(crate) fn run(
         best_h: plan_h,
         dpi: decoded.dpi,
         cancel,
+        enc: JpegSink::new(),
     };
 
     let mut downscales = 0u32;
@@ -454,28 +606,33 @@ pub(crate) fn run(
             Err(Stop::Encode) => return Outcome::fail(E_DECODE, msg_decode()),
             Ok(Some(q)) => {
                 // 10-11. Encode the final image at the winning quality and verify its
-                // length. This encode is not a probe. If the encoder did not reproduce
-                // the probed size, step q down by one, at most 3 attempts (§5.2.11).
+                // length. This encode is not a probe and reuses the probe buffer. If
+                // the encoder did not reproduce the probed size, step q down by one,
+                // at most 3 attempts (§5.2.11).
                 let mut quality = q;
-                let mut final_bytes =
-                    match encode_rgb_jpeg(current, buf_w, buf_h, quality, decoded.dpi) {
-                        Ok(b) => b,
-                        Err(_) => return Outcome::fail(E_DECODE, msg_decode()),
-                    };
+                if prober
+                    .enc
+                    .encode(current, buf_w, buf_h, quality, decoded.dpi)
+                    .is_err()
+                {
+                    return Outcome::fail(E_DECODE, msg_decode());
+                }
                 let mut attempts = 0;
-                while final_bytes.len() as u64 > target {
+                while prober.enc.bytes().len() as u64 > target {
                     if attempts == 3 || quality <= MIN_QUALITY {
                         return Outcome::fail(crate::E_UNSTABLE, msg_unstable());
                     }
                     attempts += 1;
                     quality -= 1;
-                    final_bytes = match encode_rgb_jpeg(current, buf_w, buf_h, quality, decoded.dpi)
+                    if prober
+                        .enc
+                        .encode(current, buf_w, buf_h, quality, decoded.dpi)
+                        .is_err()
                     {
-                        Ok(b) => b,
-                        Err(_) => return Outcome::fail(E_DECODE, msg_decode()),
-                    };
+                        return Outcome::fail(E_DECODE, msg_decode());
+                    }
                 }
-                return Outcome::success(final_bytes, quality, buf_w, buf_h, prober.probes);
+                return Outcome::success(prober.enc.take(), quality, buf_w, buf_h, prober.probes);
             }
             Ok(None) => {}
         }
@@ -500,6 +657,13 @@ pub(crate) fn run(
         }
 
         downscales += 1;
+        // The current image is about to be replaced by a smaller one, and the
+        // probe buffer is sized for the old one: drop it before the resize so the
+        // source, the destination and the encoder output never coexist.
+        prober.enc.release();
+        // Free the outgoing scaled buffer before the replacement is allocated:
+        // the peak for a step is source + next, not source + previous + next.
+        drop(std::mem::take(&mut buf));
         buf = box_resize(&pixels, src_w, src_h, next_w, next_h);
         buf_w = next_w;
         buf_h = next_h;
@@ -656,6 +820,130 @@ mod tests {
         // mean = 1.5 -> 2
         let px = vec![1u8, 1, 1, 2, 2, 2];
         assert_eq!(box_resize(&px, 2, 1, 1, 1), vec![2, 2, 2]);
+    }
+
+    // --- memory ----------------------------------------------------------
+
+    #[test]
+    fn jpeg_sink_keeps_one_buffer_for_every_probe() {
+        let px = noise_rgb(600, 400, 3);
+        let mut sink = JpegSink::new();
+        let mut capacity_after_first = 0usize;
+        let mut sizes = Vec::new();
+
+        // Descending quality, like the real ladder: the first probe is the largest.
+        for (index, q) in (30..=MAX_QUALITY).rev().step_by(5).enumerate() {
+            sizes.push(sink.encode(&px, 600, 400, q, 96).unwrap());
+            if index == 0 {
+                capacity_after_first = sink.buf.capacity();
+                assert!(
+                    capacity_after_first >= sizes[0],
+                    "buffer must hold the largest output"
+                );
+            }
+        }
+
+        assert!(
+            sizes.len() >= 13,
+            "expected the whole ladder, got {}",
+            sizes.len()
+        );
+        assert!(
+            sizes[0] > *sizes.last().unwrap(),
+            "q95 must be larger than q30"
+        );
+        assert_eq!(
+            sink.buf.capacity(),
+            capacity_after_first,
+            "capacity must not grow once the largest output has been written"
+        );
+        assert_eq!(
+            sink.allocations, 1,
+            "14 probes must allocate one output buffer, not one per probe"
+        );
+    }
+
+    #[test]
+    fn jpeg_sink_encodes_identically_on_reuse() {
+        let px = noise_rgb(320, 240, 12);
+        let mut sink = JpegSink::new();
+        sink.encode(&px, 320, 240, 60, 96).unwrap();
+        let first = sink.bytes().to_vec();
+        assert_eq!(sink.encode(&px, 320, 240, 60, 96).unwrap(), first.len());
+        assert_eq!(
+            sink.bytes(),
+            &first[..],
+            "a reused buffer must not shift bytes"
+        );
+
+        // Same bytes as a virgin sink, and the JFIF density is patched either way.
+        let mut fresh = JpegSink::new();
+        fresh.encode(&px, 320, 240, 60, 96).unwrap();
+        assert_eq!(fresh.bytes(), &first[..]);
+        assert_eq!(crate::exif::jfif_density(&first), Some((96, 96)));
+    }
+
+    #[test]
+    fn jpeg_sink_hands_its_buffer_out_once() {
+        let px = noise_rgb(64, 48, 4);
+        let mut sink = JpegSink::new();
+        sink.encode(&px, 64, 48, 70, 96).unwrap();
+        let out = sink.take();
+        assert_eq!(&out[..2], &[0xFF, 0xD8]);
+        assert!(sink.bytes().is_empty(), "take must leave the sink empty");
+    }
+
+    #[test]
+    fn jpeg_sink_releases_its_buffer_on_demand() {
+        let px = noise_rgb(64, 48, 4);
+        let mut sink = JpegSink::new();
+        sink.encode(&px, 64, 48, 90, 96).unwrap();
+        assert!(!sink.bytes().is_empty());
+        sink.release();
+        assert!(sink.bytes().is_empty());
+        assert_eq!(sink.buf.capacity(), 0, "a released sink holds no memory");
+        // Still usable afterwards: the next encode reallocates as needed.
+        assert!(sink.encode(&px, 64, 48, 90, 96).unwrap() > 0);
+    }
+
+    #[test]
+    fn pixel_cap_is_enforced_from_the_header_before_decoding() {
+        let px = noise_rgb(64, 48, 4);
+        let small = encode_jpeg(&px, 64, 48, 90);
+        // A few KB on disk that claims 30000×30000 = 900 MP. Decoding it would mean
+        // a 2.7 GB buffer; the cap must reject it from the header instead.
+        let huge = with_dimensions(&small, 30_000, 30_000);
+        assert_eq!(header_dimensions(&huge), Some((30_000, 30_000)));
+
+        let out = fit(&huge, "huge.jpg", &Settings::default());
+        assert!(!out.ok);
+        assert_eq!(out.err_code, E_TOO_MANY_PIXELS);
+        assert_eq!(out.err_detail, "Too large: 900 MP. Limit is 80 MP.");
+        assert!(out.jpeg.is_empty());
+    }
+
+    #[test]
+    fn pixel_cap_is_a_real_bound_on_the_largest_allocation() {
+        // The documented ceiling: RGB24 at the cap is the biggest single buffer.
+        assert_eq!(MAX_PIXELS * 3, 240_000_000);
+        assert_eq!(crate::MAX_PIXELS, MAX_PIXELS);
+    }
+
+    #[test]
+    fn header_dimensions_agree_with_the_decoded_image() {
+        let px = noise_rgb(37, 23, 6);
+        let jpeg = encode_jpeg(&px, 37, 23, 85);
+        let mut rgba = Vec::with_capacity(px.len() / 3 * 4);
+        for pixel in px.chunks_exact(3) {
+            rgba.extend_from_slice(pixel);
+            rgba.push(255);
+        }
+        let png = encode_png_rgba(&rgba, 37, 23);
+        let bmp = encode_bmp(&px, 37, 23);
+        for file in [jpeg, png, bmp] {
+            assert_eq!(header_dimensions(&file), Some((37, 23)));
+        }
+        assert_eq!(header_dimensions(b"not an image"), None);
     }
 
     // --- end-to-end ------------------------------------------------------

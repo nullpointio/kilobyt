@@ -19,7 +19,7 @@
 // tab and `(Get-Item .\Kilobyt.exe).VersionInfo`. Keep every version field in
 // sync with [package] version in Cargo.toml.
 1 VERSIONINFO
-FILEVERSION 1,1,3,0
+FILEVERSION 1,1,4,0
 PRODUCTVERSION 1,1,3,0
 FILEFLAGSMASK 0x3fL
 FILEFLAGS 0x0L
@@ -33,12 +33,12 @@ BEGIN
         BEGIN
             VALUE "CompanyName", "nullpointio"
             VALUE "FileDescription", "Compress a photo to fit a hard upload limit, offline"
-            VALUE "FileVersion", "1.1.3.0"
+            VALUE "FileVersion", "1.1.4.0"
             VALUE "InternalName", "kilobyt"
             VALUE "LegalCopyright", "MIT License — nullpointio"
             VALUE "OriginalFilename", "Kilobyt.exe"
             VALUE "ProductName", "Kilobyt"
-            VALUE "ProductVersion", "1.1.3.0"
+            VALUE "ProductVersion", "1.1.4.0"
             VALUE "Comments", "Exact byte-target JPEG compression. Nothing is uploaded."
         END
     END
