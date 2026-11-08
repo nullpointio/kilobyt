@@ -1,4 +1,4 @@
-# Kilobyt v1.1.1 — native rewrite
+# Kilobyt v1.1.2 — application icon
 
 **Make a photo provably fit an upload limit — offline, nothing uploaded.**
 
