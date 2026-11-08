@@ -43,17 +43,17 @@ use windows_sys::Win32::UI::Shell::{
 use windows_sys::Win32::UI::WindowsAndMessaging::{
     AdjustWindowRect, CreateWindowExW, DefWindowProcW, DestroyWindow, DispatchMessageW,
     GetClientRect, GetMessageW, GetSystemMetrics, GetWindowLongPtrW, GetWindowTextLengthW,
-    GetWindowTextW, IsDialogMessageW, KillTimer, LoadCursorW, LoadIconW, MoveWindow, PostMessageW,
-    PostQuitMessage, RegisterClassW, SendMessageW, SetForegroundWindow, SetTimer,
+    GetWindowTextW, IsDialogMessageW, KillTimer, LoadCursorW, LoadIconW, LoadImageW, MoveWindow,
+    PostMessageW, PostQuitMessage, RegisterClassW, SendMessageW, SetForegroundWindow, SetTimer,
     SetWindowLongPtrW, SetWindowPos, SetWindowTextW, ShowWindow, TranslateMessage,
-    BS_AUTORADIOBUTTON, ES_AUTOHSCROLL, ES_NUMBER, GWLP_USERDATA, IDC_ARROW, IDI_APPLICATION,
-    MINMAXINFO, MSG, SM_CXSCREEN, SM_CYSCREEN, SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOSIZE,
-    SWP_NOZORDER, SW_HIDE, SW_SHOW, SW_SHOWNORMAL, WM_APP, WM_CLOSE, WM_COMMAND, WM_CREATE,
-    WM_CTLCOLORSTATIC, WM_DESTROY, WM_DPICHANGED, WM_DROPFILES, WM_GETMINMAXINFO, WM_KEYDOWN,
-    WM_NCCREATE, WM_NOTIFY, WM_SETFONT, WM_SETICON, WM_SIZE, WM_TIMER, WNDCLASSW, WS_BORDER,
-    WS_CAPTION, WS_CHILD, WS_CLIPCHILDREN, WS_CLIPSIBLINGS, WS_EX_CLIENTEDGE, WS_EX_CONTROLPARENT,
-    WS_EX_DLGMODALFRAME, WS_MAXIMIZEBOX, WS_OVERLAPPEDWINDOW, WS_POPUP, WS_SYSMENU, WS_TABSTOP,
-    WS_THICKFRAME, WS_VISIBLE, WS_VSCROLL,
+    BS_AUTORADIOBUTTON, ES_AUTOHSCROLL, ES_NUMBER, GWLP_USERDATA, HICON, IDC_ARROW,
+    IDI_APPLICATION, IMAGE_ICON, LR_DEFAULTCOLOR, LR_DEFAULTSIZE, MINMAXINFO, MSG, SM_CXSCREEN,
+    SM_CXSMICON, SM_CYSCREEN, SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOSIZE, SWP_NOZORDER, SW_HIDE,
+    SW_SHOW, SW_SHOWNORMAL, WM_APP, WM_CLOSE, WM_COMMAND, WM_CREATE, WM_CTLCOLORSTATIC, WM_DESTROY,
+    WM_DPICHANGED, WM_DROPFILES, WM_GETMINMAXINFO, WM_KEYDOWN, WM_NCCREATE, WM_NOTIFY, WM_SETFONT,
+    WM_SETICON, WM_SIZE, WM_TIMER, WNDCLASSW, WS_BORDER, WS_CAPTION, WS_CHILD, WS_CLIPCHILDREN,
+    WS_CLIPSIBLINGS, WS_EX_CLIENTEDGE, WS_EX_CONTROLPARENT, WS_EX_DLGMODALFRAME, WS_MAXIMIZEBOX,
+    WS_OVERLAPPEDWINDOW, WS_POPUP, WS_SYSMENU, WS_TABSTOP, WS_THICKFRAME, WS_VISIBLE, WS_VSCROLL,
 };
 
 // ---------------------------------------------------------------------------
@@ -327,6 +327,33 @@ fn app_mut(hwnd: HWND) -> Option<&'static mut App> {
     }
 }
 
+/// The icon compiled into the executable: `assets/kilobyt.rc` declares it as
+/// `1 ICON`, so resource id 1 is the whole multi-resolution group and Windows
+/// picks the frame that fits `size`.
+///
+/// Falls back to the stock application icon, so a build made with the resource
+/// compiler skipped still shows *an* icon rather than none.
+fn app_icon(size: i32) -> HICON {
+    // SAFETY: null asks for the module handle of this executable; the resource
+    // id is a literal and the flags are the documented pick-best-frame pair.
+    unsafe {
+        let hinst = GetModuleHandleW(std::ptr::null());
+        let icon = LoadImageW(
+            hinst,
+            1 as *const u16,
+            IMAGE_ICON,
+            size,
+            size,
+            LR_DEFAULTCOLOR | LR_DEFAULTSIZE,
+        );
+        if icon.is_null() {
+            LoadIconW(std::ptr::null_mut(), IDI_APPLICATION)
+        } else {
+            icon
+        }
+    }
+}
+
 // ---------------------------------------------------------------------------
 // Entry point
 // ---------------------------------------------------------------------------
@@ -351,7 +378,7 @@ pub fn run() -> i32 {
             cbClsExtra: 0,
             cbWndExtra: 0,
             hInstance: hinst,
-            hIcon: LoadIconW(std::ptr::null_mut(), IDI_APPLICATION),
+            hIcon: app_icon(0),
             hCursor: cursor,
             hbrBackground: (16 + 1) as HBRUSH, // COLOR_BTNFACE + 1: plain system face
             lpszMenuName: std::ptr::null(),
@@ -812,11 +839,14 @@ fn build_ui(hwnd: HWND, dpi: u32) -> App {
             }
         }
         SendMessageW(drop_main, WM_SETFONT, font_big as usize, 1);
+        // ICON_BIG (1) drives the taskbar and Alt-Tab; ICON_SMALL (0) the
+        // title bar. Both come from the same compiled-in group.
+        SendMessageW(hwnd, WM_SETICON, 1, app_icon(0) as isize);
         SendMessageW(
             hwnd,
             WM_SETICON,
-            1,
-            LoadIconW(std::ptr::null_mut(), IDI_APPLICATION) as isize,
+            0,
+            app_icon(GetSystemMetrics(SM_CXSMICON)) as isize,
         );
 
         // Character limits on the numeric fields.
