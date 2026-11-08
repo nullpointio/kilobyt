@@ -1,9 +1,19 @@
-# Kilobyt v1.1.2 — application icon
+# Kilobyt v1.1.3 — version info in the exe
 
 **Make a photo provably fit an upload limit — offline, nothing uploaded.**
 
 Drop photos, type the limit the form gives you, get a JPEG that is at or under it. Or get an honest
 message saying the limit is impossible, instead of a file that will be rejected later.
+
+## What changed in 1.1.3
+
+- The exe now carries a PE `VERSIONINFO` resource, so Task Manager's **Description** column and
+  Explorer's Details tab show a product name and version instead of `Kilobyt.ex…`.
+- Fields: `CompanyName=nullpointio`, `ProductName=Kilobyt`, `FileDescription=Compress a photo to fit a
+  hard upload limit, offline`, `FileVersion`/`ProductVersion=1.1.3.0`, `OriginalFilename=Kilobyt.exe`,
+  `LegalCopyright=MIT License — nullpointio`.
+- It is compiled into the same resource object as the icon and manifest, so there is no second file to
+  keep in sync. `-version` still prints the crate version, which now matches. No behaviour change.
 
 ## What changed in 1.1.0
 
