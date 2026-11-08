@@ -1,11 +1,11 @@
-//! Embeds the application manifest (Common Controls v6 + per-monitor DPI) into
-//! the Windows executable.
+//! Embeds the application manifest (Common Controls v6 + per-monitor DPI) and
+//! the application icon into the Windows executable.
 //!
 //! `windows-sys` cannot do this and Cargo has no manifest key for it, so the
-//! resource is compiled here and handed to the linker. No crates are added:
+//! resources are compiled here and handed to the linker. No crates are added:
 //! MinGW's `windres` covers every `*-windows-gnu` target and the Windows SDK's
-//! `rc.exe` covers `*-msvc`. If neither tool is present the build still
-//! succeeds, with a warning, so `cargo test` on a bare host is never blocked.
+//! `rc.exe` covers `*-msvc`. Non-Windows hosts return immediately, so `cargo
+//! test` on a bare Linux host is unaffected.
 
 use std::env;
 use std::path::{Path, PathBuf};
@@ -14,6 +14,7 @@ use std::process::Command;
 fn main() {
     println!("cargo:rerun-if-changed=assets/kilobyt.manifest");
     println!("cargo:rerun-if-changed=assets/kilobyt.rc");
+    println!("cargo:rerun-if-changed=assets/icon.ico");
 
     let target = env::var("TARGET").unwrap_or_default();
     if env::var("CARGO_CFG_TARGET_OS").as_deref() != Ok("windows") {
