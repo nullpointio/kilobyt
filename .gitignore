@@ -1,7 +1,6 @@
+/target/
+*.exe
+/release/
 bin/
 obj/
 *.user
-.vs/
-publish/
-artifacts/
-TestResults/
