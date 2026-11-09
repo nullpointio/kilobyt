@@ -1,0 +1,25 @@
+# yaml-language-server: $schema=https://aka.ms/winget-manifest.installer.1.28.0.schema.json
+PackageIdentifier: nullpointio.Kilobyt
+PackageVersion: 1.1.4
+InstallerLocale: en-US
+Platform:
+- Windows.Desktop
+MinimumOSVersion: 10.0.0.0
+InstallerType: portable
+Scope: user
+InstallModes:
+- silent
+- silentWithProgress
+ElevationRequirement: elevationProhibited
+Commands:
+- kilobyt
+ReleaseDate: '2026-11-09'
+Installers:
+- Architecture: x64
+  InstallerUrl: https://github.com/nullpointio/kilobyt/releases/download/v1.1.4/Kilobyt.exe
+  InstallerSha256: B544F702C8FA2DFB5BBED274A159369401B5F4B600BBC35F8619DF4CE40C2949
+  InstallerType: portable
+  Commands:
+  - kilobyt
+ManifestType: installer
+ManifestVersion: 1.28.0

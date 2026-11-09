@@ -1,0 +1,29 @@
+# yaml-language-server: $schema=https://aka.ms/winget-manifest.defaultLocale.1.28.0.schema.json
+PackageIdentifier: nullpointio.Kilobyt
+PackageVersion: 1.1.4
+PackageLocale: en-US
+Publisher: nullpointio
+PublisherUrl: https://github.com/nullpointio
+PublisherSupportUrl: https://github.com/nullpointio/kilobyt/issues
+PackageName: Kilobyt
+PackageUrl: https://github.com/nullpointio/kilobyt
+License: MIT
+LicenseUrl: https://github.com/nullpointio/kilobyt/blob/main/LICENSE
+ShortDescription: Offline utility that makes a photo provably fit a hard upload limit (exact KB and max pixels). Nothing is
+  uploaded.
+Description: 'Kilobyt writes a JPEG at or under the exact byte limit you type in, or writes nothing and tells you the smallest
+  size that is achievable. The binary contains no network code: no update check, no telemetry, no upload path. Single portable
+  exe, no installer and no runtime.'
+Moniker: kilobyt
+Tags:
+- image
+- compression
+- photo
+- offline
+- privacy
+- utility
+ReleaseNotesUrl: https://github.com/nullpointio/kilobyt/releases/tag/v1.1.4
+InstallationNotes: The executable is unsigned, so Windows SmartScreen warns on first run (More info -> Run anyway). The pinned
+  SHA-256 is the integrity check.
+ManifestType: defaultLocale
+ManifestVersion: 1.28.0
