@@ -1,6 +1,6 @@
-# Kilobyt
+# Kilobyt — compress a photo to an exact KB size on Windows, offline
 
-**Make a photo provably fit an upload limit. Offline, no account, nothing uploaded.**
+**Compress a JPG to 100 KB (or any exact limit) on Windows without uploading it. One native exe, no installer, no account — nothing leaves your machine.**
 
 - **What it is:** one native Windows exe that writes a JPEG at or under the exact byte limit you type in,
   or writes nothing and tells you the smallest size that is achievable.
@@ -50,6 +50,8 @@ No cropping or exact `W × H` output (fit-within only, aspect preserved). No PNG
 auto-update, no shell integration, no settings that persist between runs.
 
 ## Common questions
+
+**How do I compress a photo to 100 KB without uploading it?** Drop the photo into Kilobyt, type `100` in the Max size (KB) field, and press Compress. The exe runs entirely offline; it writes a JPEG at or under 100,000 bytes and never sends the photo anywhere.
 
 **Why is the exe unsigned?** There is no code-signing certificate. It is a recurring annual cost with an
 identity-verification process, and this project has no revenue. SmartScreen will warn on first run —
