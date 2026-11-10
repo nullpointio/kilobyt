@@ -17,6 +17,10 @@
     <Program_Install_Support>No Install</Program_Install_Support>
     <Program_OS_Support>Win11,Win10</Program_OS_Support>
     <Program_Language>English</Program_Language>
+    <File_Info>
+      <File_Size_K>583</File_Size_K>
+      <File_Size_KB>583</File_Size_KB>
+    </File_Info>
     <Program_Change_Info>1.1.4 - exact-size JPEG compression, offline, single exe</Program_Change_Info>
   </Program_Info>
   <Program_Descriptions>
@@ -75,6 +79,8 @@
     <Company_Name>nullpointio</Company_Name>
     <Company_Name_Short>nullpointio</Company_Name_Short>
     <Company_Web_Site_URL>https://github.com/nullpointio</Company_Web_Site_URL>
+    <Company_WebSite_URL>https://github.com/nullpointio</Company_WebSite_URL>
+    <Company_Website_URL>https://github.com/nullpointio</Company_Website_URL>
     <Company_Info_URL>https://github.com/nullpointio</Company_Info_URL>
   </Company_Info>
 </XML_DIZ_INFO>
