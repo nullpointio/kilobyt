@@ -37,6 +37,7 @@
       <Application_Screenshot_URL>https://raw.githubusercontent.com/nullpointio/kilobyt/main/docs/assets/screenshot.png</Application_Screenshot_URL>
       <Application_Icon_URL>https://raw.githubusercontent.com/nullpointio/kilobyt/main/assets/icon.ico</Application_Icon_URL>
       <Application_XML_File_URL>https://raw.githubusercontent.com/nullpointio/kilobyt/main/pad/kilobyt.xml</Application_XML_File_URL>
+      <APPLICATION_XML_FILE_URL>https://raw.githubusercontent.com/nullpointio/kilobyt/main/pad/kilobyt.xml</APPLICATION_XML_FILE_URL>
     </Application_URLs>
     <Download_URLs>
       <Primary_Download_URL>https://github.com/nullpointio/kilobyt/releases/latest</Primary_Download_URL>
@@ -60,6 +61,7 @@
     </Tech_Info>
   </Program_Details>
   <Program_Category>
+    <Program_Category_Class>Multimedia</Program_Category_Class>
     <Graphics_and_Multimedia>Graphic Editors</Graphics_and_Multimedia>
   </Program_Category>
   <EULA></EULA>
