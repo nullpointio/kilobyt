@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8"?>
+<XML_DIZ_INFO>
+  <MASTER_PAD_VERSION_INFO>
+    <MASTER_PAD_VERSION>4.0</MASTER_PAD_VERSION>
+    <MASTER_PAD_EDITOR>nullpointio</MASTER_PAD_EDITOR>
+    <MASTER_PAD_INFO>Portable Application Description, conforms to PAD 4.0 specification</MASTER_PAD_INFO>
+  </MASTER_PAD_VERSION_INFO>
+  <Program_Info>
+    <Program_Name>Kilobyt</Program_Name>
+    <Program_Version>1.1.4</Program_Version>
+    <Program_Release_Month>11</Program_Release_Month>
+    <Program_Release_Day>10</Program_Release_Day>
+    <Program_Release_Year>2026</Program_Release_Year>
+    <Program_Cost_Dollars>0</Program_Cost_Dollars>
+    <Program_Type>Freeware</Program_Type>
+    <Program_Release_Status>Stable</Program_Release_Status>
+    <Program_Install_Support>No Install</Program_Install_Support>
+    <Program_OS_Support>Win11,Win10</Program_OS_Support>
+    <Program_Language>English</Program_Language>
+    <Program_Change_Info>1.1.4 - exact-size JPEG compression, offline, single exe</Program_Change_Info>
+  </Program_Info>
+  <Program_Descriptions>
+    <English>
+      <Keywords>compress jpg;reduce photo size;100kb photo;image compressor;offline</Keywords>
+      <Char_Desc_45>Compress a photo to an exact KB size, fully offline</Char_Desc_45>
+      <Char_Desc_80>Shrink a JPG to an exact KB limit on Windows without uploading it</Char_Desc_80>
+      <Char_Desc_250>Kilobyt writes a JPEG at or under the exact byte limit you type in, or writes nothing and tells you the smallest size it can reach. No upload, no account, no installer: one 583 KB native exe with no network code.</Char_Desc_250>
+      <Char_Desc_450>Kilobyt is a single native Windows exe that compresses a photo to an exact KB limit, for people filling forms that require a photo under 100 KB. Everything runs locally: the binary contains no network code, so an identity photo never leaves the machine. Drop a file, type the maximum size in KB, press Compress; Kilobyt either produces a JPEG at or under the limit or reports the smallest achievable size. Portable, no admin rights, no runtime.</Char_Desc_450>
+      <Char_Desc_2000>Kilobyt compresses photos to an exact maximum file size on Windows, completely offline. Type a limit such as 100 KB and Kilobyt writes a JPEG at or under that many bytes, or writes nothing and tells you the smallest size it can actually reach, so you never guess. Typical uses: visa, ID, job-application and government portals that reject uploads over a fixed size. Nothing is uploaded: the 583 KB native executable contains no network code at all, so the source image never leaves the machine. Single exe, no installer, no runtime, no admin rights, no telemetry. Source is MIT licensed and builds with cargo build --release; every release publishes a SHA-256 checksum and is verified by an automated self-test in CI.</Char_Desc_2000>
+    </English>
+  </Program_Descriptions>
+  <Web_Info>
+    <Application_URLs>
+      <Application_Info_URL>https://github.com/nullpointio/kilobyt</Application_Info_URL>
+      <Application_OS_Support>Windows</Application_OS_Support>
+      <Application_Order_URL>https://github.com/nullpointio/kilobyt/releases/latest</Application_Order_URL>
+      <Application_Screenshot_URL>https://raw.githubusercontent.com/nullpointio/kilobyt/main/docs/assets/screenshot.png</Application_Screenshot_URL>
+      <Application_Icon_URL>https://raw.githubusercontent.com/nullpointio/kilobyt/main/assets/icon.ico</Application_Icon_URL>
+      <Application_XML_File_URL>https://raw.githubusercontent.com/nullpointio/kilobyt/main/pad/kilobyt.xml</Application_XML_File_URL>
+    </Application_URLs>
+    <Download_URLs>
+      <Primary_Download_URL>https://github.com/nullpointio/kilobyt/releases/latest</Primary_Download_URL>
+    </Download_URLs>
+    <Company_Info>
+      <Company_Name>nullpointio</Company_Name>
+      <Company_URL>https://github.com/nullpointio</Company_URL>
+      <Contact_Info>https://github.com/nullpointio/kilobyt/issues</Contact_Info>
+    </Company_Info>
+  </Web_Info>
+  <Program_Details>
+    <File_Info>
+      <File_Size_Bytes>596992</File_Size_Bytes>
+      <File_Size_MB>0.58</File_Size_MB>
+      <File_Size_KB>583</File_Size_KB>
+    </File_Info>
+    <Tech_Info>
+      <Application_Requires_Additional_Software>No</Application_Requires_Additional_Software>
+      <Install_Uninstall_Supported>No Install</Install_Uninstall_Supported>
+      <Uninstaller_Included>No</Uninstaller_Included>
+    </Tech_Info>
+  </Program_Details>
+  <Program_Category>
+    <Graphics_and_Multimedia>Graphic Editors</Graphics_and_Multimedia>
+  </Program_Category>
+  <EULA></EULA>
+  <Permissions>
+    <Freeware>Yes</Freeware>
+    <Open_Source>Yes</Open_Source>
+    <MIT_License>Yes</MIT_License>
+  </Permissions>
+</XML_DIZ_INFO>
