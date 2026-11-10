@@ -52,6 +52,7 @@
     <File_Info>
       <File_Size_Bytes>596992</File_Size_Bytes>
       <File_Size_MB>0.58</File_Size_MB>
+      <File_Size_K>583</File_Size_K>
       <File_Size_KB>583</File_Size_KB>
     </File_Info>
     <Tech_Info>
@@ -70,4 +71,10 @@
     <Open_Source>Yes</Open_Source>
     <MIT_License>Yes</MIT_License>
   </Permissions>
+  <Company_Info>
+    <Company_Name>nullpointio</Company_Name>
+    <Company_Name_Short>nullpointio</Company_Name_Short>
+    <Company_Web_Site_URL>https://github.com/nullpointio</Company_Web_Site_URL>
+    <Company_Info_URL>https://github.com/nullpointio</Company_Info_URL>
+  </Company_Info>
 </XML_DIZ_INFO>
