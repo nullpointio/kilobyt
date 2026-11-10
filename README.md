@@ -108,6 +108,12 @@ and a batch never holds two files' pixels at once.
 The product spec, including the exact algorithm and its acceptance criteria, is in [`docs/prd.md`](docs/prd.md).
 The original C#/.NET implementation is kept on the `csharp-v1` branch for reference.
 
+## Archived copy
+
+An independent, permanently addressable copy of this repository is kept by Software Heritage:
+
+* snapshot `swh:1:snp:66d2cdf656fce7bd96c387e7e485a7daf2f1dc90` — [https://archive.softwareheritage.org/swh:1:snp:66d2cdf656fce7bd96c387e7e485a7daf2f1dc90;origin=https://github.com/nullpointio/kilobyt](https://archive.softwareheritage.org/swh:1:snp:66d2cdf656fce7bd96c387e7e485a7daf2f1dc90;origin=https://github.com/nullpointio/kilobyt)
+
 ## License
 
 MIT — see [LICENSE](LICENSE).
